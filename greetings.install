@@ -1,0 +1,56 @@
+<?php
+
+/**
+ * @file
+ * This will create greetings content type 
+ */
+
+/**
+ * Implements hook_install().
+ */
+function greetings_install() {
+  drupal_install_schema('greetings');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function greetings_uninstall() {
+  drupal_uninstall_schema('greetings');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function greetings_schema() {
+  $schema['greetings'] = array(
+    'fields' => array(
+      'vid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'ocation_date' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'message' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('vid', 'nid'),
+  );
+
+  return $schema;
+}

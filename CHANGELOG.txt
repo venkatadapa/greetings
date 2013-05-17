@@ -1,0 +1,3 @@
+Greetings 6.x, 2011-09-16
+------------------------------
+Initial release of Greetings module. 

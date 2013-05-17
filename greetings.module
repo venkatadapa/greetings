@@ -1,0 +1,255 @@
+<?php
+/**
+ * @file
+ * This will create one new content type and one new block with name Greetings
+ */
+
+/**
+ * Implements hook_help().
+ */
+function greetings_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#greetings':
+      $output = '';
+      $output .= '<p>' . t('This module will create simply one new content type called Greetings and also create one block with lable Greetings') . '</p>';
+      $output .= '<p>' . t('So admin can easily add any number of occational greeting messages with date and message. And move the Greetings block to any region
+where you want to display the message') . '</p>';
+      $output .= '<p>' . t('Ex: If you add greeting node with date Jan 1st, and Message as Happy New Year to All Customers, So on January first Your site visiters will recieve your wishes') . '</p>';
+      return $output;
+  }
+}
+
+/**
+ * Implements hook_perm().
+ */
+function greetings_perm() {
+  return array(
+    'create greetings content',
+    'update greetings content',
+    'delete greetings content',
+  );
+}
+
+/**
+ * Implements hook_access().
+ */
+function greetings_access($op, $node, $account) {
+  if ($op == 'create') {
+    return user_access('create greetings content', $account);
+  }
+
+  if ($op == 'update') {
+    return user_access('update greetings content', $account);
+  }
+
+  if ($op == 'delete') {
+    return user_access('delete greetings content', $account);
+  }
+}
+
+/**
+ * Implements hook_block().
+ */
+function greetings_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    case 'list':
+      $block['greetings']['info'] = t('Greetings');
+      return $block;
+
+    case 'view':
+      switch ($delta) {
+        case 'greetings':
+          $blocks['subject'] = t('');
+          $blocks['content'] = greetings_show_occation_message();
+          break;
+      }
+      return $blocks;
+  }
+}
+
+/*
+ * Messages block content implementation.
+ */
+function greetings_show_occation_message() {
+  $today = date('m-d-Y');
+  $messages = db_query("SELECT message from {greetings} where ocation_date='%s'", $today);
+  $output = array();
+  while ($row = db_fetch_array($messages)) {
+    $output[] = $row['message'];
+  }
+  if (count($output) > 0) {
+    return theme('greetings_block', $output);
+  }
+  else {
+    return '';
+  }
+}
+
+/**
+ * Implements hook_node_info().
+ */
+function greetings_node_info() {
+  return array(
+    'greeting' => array(
+      'name' => t('Greetings'),
+      'module' => 'greetings',
+      'description' => t("Add date and message, so the message will be displayed when the day comes"),
+      'has_title' => TRUE,
+      'title_label' => t('Title'),
+      'has_body' => TRUE,
+      'body_label' => t('Message'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_form().
+ */
+function greetings_form(&$node, $form_state) {
+  $type = node_get_types('type', $node);
+  if ($type->has_title) {
+    $form['title'] = array(
+      '#type' => 'textfield',
+      '#title' => check_plain($type->title_label),
+      '#required' => TRUE,
+      '#default_value' => $node->title,
+      '#weight' => -5,
+    );
+  }
+
+  // Extra form elements specific to greetings node type.
+  $form['ocation_date'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Date'),
+    '#description' => t('Enter date in mm-dd-yyyy format (Ex: 08-20-2011 for Aug 20, 2011)'),
+    '#required' => TRUE,
+    '#default_value' => isset($node->ocation_date) ? $node->ocation_date : date('m-d-Y'),
+  );
+  $form['message'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Message'),
+    '#required' => TRUE,
+    '#description' => t('This message will appear in the block on above mentioned date'),
+    '#default_value' => isset($node->message) ? $node->message : '',
+    '#cols' => 60,
+    '#rows' => 5,
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_validate().
+ */
+function greetings_validate($node, &$form) {
+  
+  if ($node->ocation_date) {
+    $date_parts = explode('-', trim($node->ocation_date));
+    if (!checkdate(intval($date_parts[0]), intval($date_parts[1]), intval($date_parts[2]))) {
+      form_set_error('ocation_date', t('Please enter valid Date.'));
+    }
+  }
+}
+
+/**
+ * Implements hook_insert().
+ *
+ * As a new node is being inserted into the database, we need to do our own
+ * database inserts.
+ */
+function greetings_insert($node) {
+  db_query("INSERT INTO {greetings} (vid, nid, ocation_date, message) VALUES (%d, %d, '%s', '%s')", $node->vid, $node->nid, $node->ocation_date, $node->message);
+}
+
+/**
+ * Implements hook_update().
+ */
+function greetings_update($node) {
+  if ($node->revision) {
+    greetings_insert($node);
+  }
+  else {
+    db_query("UPDATE {greetings} SET ocation_date = '%s', message = '%s' WHERE vid = %d", $node->ocation_date, $node->message, $node->vid);
+  }
+}
+
+/**
+ * Implements hook_nodeapi().
+ *
+ * When a node revision is deleted, we need to remove the corresponding record
+ * from our table. The only way to handle revision deletion is by implementing
+ * hook_nodeapi().
+ */
+function greetings_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'delete revision':
+      // Notice that we're matching a single revision based on the node's vid.
+      db_query('DELETE FROM {greetings} WHERE vid = %d', $node->vid);
+      break;
+  }
+}
+
+/**
+ * Implements hook_delete().
+ *
+ * When a node is deleted, we need to remove all related records from our table.
+ */
+function greetings_delete($node) {
+  // Notice that we're matching all revision, by using the node's nid.
+  db_query('DELETE FROM {greetings} WHERE nid = %d', $node->nid);
+}
+
+/**
+ * Implements hook_load().
+ *
+ * This hook is called every time a node is loaded, so display 
+ * the date and message values.
+ */
+function greetings_load($node) {
+  $additions = db_fetch_object(db_query('SELECT ocation_date, message FROM {greetings} WHERE vid = %d', $node->vid));
+  return $additions;
+}
+
+/**
+ * Implements hook_view().
+ *
+ * This is a typical implementation that simply runs the node text through
+ * the output filters.
+ */
+function greetings_view($node, $teaser = FALSE, $page = FALSE) {
+  $node = node_prepare($node, $teaser);
+  $node->content['myfield'] = array(
+     '#value' => theme('greetings_info', $node),
+     '#weight' => 1,
+   );
+  return $node;
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * This lets us tell Drupal about our theme functions and their arguments.
+ */
+function greetings_theme() {
+  return array(
+    'greetings_info' => array(
+      'arguments' => array('node'),
+    ),
+    'greetings_block' => array(
+      'arguments' => array('messages' => NULL),
+      'template' => 'greetings-block',
+    ),
+  );
+}
+
+/*
+ * Theme function for messages block.
+ */
+function theme_greetings_info($node) {
+  $output = '<div class="greeting-wrapper"><div class="date-info"><label><strong>Date: </strong></label>';
+  $output .= '<span>' . check_plain($node->ocation_date) . '</span></div>';
+  $output .= '<div class="message-info"><label><strong>Message: </strong></label>';
+  $output .= '<span>' . $node->message . '</span></div>';
+  $output .= '</div>';
+  return $output;
+}

@@ -1,0 +1,4 @@
+name = Greetings
+description = Wish your customers on special occations or pongals
+core = 6.x
+package = Other

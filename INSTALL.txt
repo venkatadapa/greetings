@@ -1,0 +1,10 @@
+-- REQUIREMENTS --
+
+None.
+
+-- INSTALLATION --
+
+Install as usual, Goto admin/build/modules
+Look for the module named Greetings 
+Select it and click Save configurations. 
+See http://drupal.org/node/70151 for more information.
